@@ -1,0 +1,97 @@
+-- Criação do banco de dados
+create database if not exists sistema_estoque 
+default character set utf8mb4
+collate utf8mb4_general_ci;
+
+use sistema_estoque;
+
+-- Tabela de usuários/funcionários
+CREATE TABLE usuarios (
+    id_usuario INT AUTO_INCREMENT PRIMARY KEY,
+    nome VARCHAR(100) NOT NULL,
+    email VARCHAR(100) NOT NULL UNIQUE,
+    senha VARCHAR(255) NOT NULL, -- Armazenar com password_hash
+    perfil ENUM('admin', 'funcionario') NOT NULL DEFAULT 'funcionario',
+    status ENUM('ativo', 'inativo') NOT NULL DEFAULT 'ativo',
+    data_cadastro DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Tabela de categorias de produtos
+CREATE TABLE categorias (
+    id_categoria INT AUTO_INCREMENT PRIMARY KEY,
+    nome VARCHAR(50) NOT NULL,
+    descricao TEXT
+);
+
+-- Tabela de fornecedores
+CREATE TABLE fornecedores (
+    id_fornecedor INT AUTO_INCREMENT PRIMARY KEY,
+    nome VARCHAR(100) NOT NULL,
+    contato VARCHAR(100),
+    telefone VARCHAR(20),
+    email VARCHAR(100),
+    endereco TEXT
+);
+
+-- Tabela principal de produtos
+CREATE TABLE produtos (
+    id_produto INT AUTO_INCREMENT PRIMARY KEY,
+    nome VARCHAR(100) NOT NULL,
+    descricao TEXT,
+    codigo_barras VARCHAR(50) UNIQUE,
+    id_categoria INT,
+    marca VARCHAR(50),
+    unidade ENUM('unidade', 'kg', 'g', 'litro', 'ml', 'caixa', 'pacote') NOT NULL DEFAULT 'unidade',
+    peso DECIMAL(10,3), -- em kg
+    id_fornecedor INT,
+    preco_unitario DECIMAL(10,2),
+    imagem VARCHAR(255),
+    data_cadastro DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (id_categoria) REFERENCES categorias(id_categoria),
+    FOREIGN KEY (id_fornecedor) REFERENCES fornecedores(id_fornecedor)
+);
+
+-- Tabela de estoque (controle de lotes)
+CREATE TABLE estoque (
+    id_estoque INT AUTO_INCREMENT PRIMARY KEY,
+    id_produto INT NOT NULL,
+    lote VARCHAR(50) NOT NULL,
+    quantidade INT NOT NULL DEFAULT 0,
+    estoque_minimo INT NOT NULL DEFAULT 1,
+    validade DATE,
+    localizacao VARCHAR(50),
+    data_entrada DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (id_produto) REFERENCES produtos(id_produto),
+    INDEX idx_validade (validade),
+    INDEX idx_lote (lote)
+);
+
+-- Tabela de movimentações
+CREATE TABLE movimentacoes (
+    id_movimentacao INT AUTO_INCREMENT PRIMARY KEY,
+    id_produto INT NOT NULL,
+    id_estoque INT,
+    id_usuario INT NOT NULL,
+    tipo ENUM('entrada', 'saida') NOT NULL,
+    quantidade INT NOT NULL,
+    data_movimentacao DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    motivo ENUM('reposicao', 'consumo_interno', 'ajuste', 'devolucao') NOT NULL,
+    observacao TEXT,
+    FOREIGN KEY (id_produto) REFERENCES produtos(id_produto),
+    FOREIGN KEY (id_estoque) REFERENCES estoque(id_estoque),
+    FOREIGN KEY (id_usuario) REFERENCES usuarios(id_usuario)
+);
+
+-- Tabela de alertas (opcional)
+CREATE TABLE alertas (
+    id_alerta INT AUTO_INCREMENT PRIMARY KEY,
+    tipo ENUM('validade', 'estoque_minimo') NOT NULL,
+    id_produto INT NOT NULL,
+    id_estoque INT,
+    mensagem TEXT NOT NULL,
+    data_alerta DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    status ENUM('pendente', 'resolvido') NOT NULL DEFAULT 'pendente',
+    FOREIGN KEY (id_produto) REFERENCES produtos(id_produto),
+    FOREIGN KEY (id_estoque) REFERENCES estoque(id_estoque)
+);
+
